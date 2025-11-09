@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TSC TypoGen – Gemini Typography Generator</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <h1>TSC TypoGen</h1>
+        <p>
+          Generate premium typography art direction powered by Google Gemini. Describe your
+          copy, tone, and constraints to receive designer-grade guidance instantly.
+        </p>
+      </header>
+
+      <section class="panel">
+        <form id="typography-form" class="input-form">
+          <label for="text">Content to typeset</label>
+          <textarea id="text" name="text" placeholder="Enter the text you need to typeset" rows="4" required></textarea>
+
+          <label for="mood">Mood or tone</label>
+          <input id="mood" name="mood" type="text" placeholder="e.g. Bold, editorial, futuristic" />
+
+          <label for="fontPreferences">Font preferences / brand guidelines</label>
+          <input
+            id="fontPreferences"
+            name="fontPreferences"
+            type="text"
+            placeholder="List any required fonts, brand colors, or typography rules"
+          />
+
+          <label for="layoutNotes">Layout or usage notes</label>
+          <textarea
+            id="layoutNotes"
+            name="layoutNotes"
+            rows="3"
+            placeholder="Provide context such as medium, target audience, or constraints"
+          ></textarea>
+
+          <button type="submit" class="primary">Generate typography</button>
+        </form>
+
+        <article class="results" id="results" hidden>
+          <div class="results__header">
+            <h2>Typography direction</h2>
+            <button id="copy-button" class="secondary" type="button">Copy markdown</button>
+          </div>
+          <pre id="recommendation" class="results__content"></pre>
+        </article>
+
+        <p id="error" class="error" role="alert" hidden></p>
+      </section>
+    </main>
+
+    <script>
+      async function submitForm(event) {
+        event.preventDefault();
+        const form = event.target;
+        const submitButton = form.querySelector('button[type="submit"]');
+        const results = document.getElementById('results');
+        const recommendationEl = document.getElementById('recommendation');
+        const errorEl = document.getElementById('error');
+
+        submitButton.disabled = true;
+        submitButton.textContent = 'Generating…';
+        results.hidden = true;
+        errorEl.hidden = true;
+
+        const payload = Object.fromEntries(new FormData(form).entries());
+
+        try {
+          const response = await fetch('{{ url_for('typography') }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to generate typography.');
+          }
+
+          recommendationEl.textContent = data.recommendation;
+          results.hidden = false;
+        } catch (error) {
+          errorEl.textContent = error.message;
+          errorEl.hidden = false;
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Generate typography';
+        }
+      }
+
+      document.getElementById('typography-form').addEventListener('submit', submitForm);
+
+      document.getElementById('copy-button').addEventListener('click', async () => {
+        const recommendationEl = document.getElementById('recommendation');
+        try {
+          await navigator.clipboard.writeText(recommendationEl.textContent);
+          const button = document.getElementById('copy-button');
+          const originalText = button.textContent;
+          button.textContent = 'Copied!';
+          setTimeout(() => (button.textContent = originalText), 1500);
+        } catch (err) {
+          alert('Copy failed. Please copy manually.');
+        }
+      });
+    </script>
+  </body>
+</html>
